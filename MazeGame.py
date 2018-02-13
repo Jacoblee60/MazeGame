@@ -1,14 +1,17 @@
 import random
 from scene import *
 import ui
+import time
 
 class MyScene (Scene):
 	def setup(self):
-		width = 20
+		width = 10
 		height = width*2
-		maze, end_x, end_y, path = genMaze(width, height)
-		div_h = self.size.h/(height+2)
-		div_w = self.size.w/(width+2)
+		self.maze, end_x, end_y, path = genMaze(width, height)
+		self.div_h = self.size.h/(height+2)
+		self.div_w = self.size.w/(width+2)
+		div_h = self.div_h
+		div_w = self.div_w
 		self.background_color = '#dfebc6'
 		
 		drawSeg(self, 'red', div_w*(end_x+1), div_h*(end_y+1), div_w, div_h)
@@ -18,10 +21,52 @@ class MyScene (Scene):
 					
 		for x in range(0, width):
 			for y in range(0, height):
-				if maze[y][x] in [1,11]:
+				if self.maze[y][x] in [1,11]:
 					drawSeg(self, 'black', div_w*(x+1), div_h*(y+1), 1, div_h)
-				if maze[y][x] in [10,11]:
+				if self.maze[y][x] in [10,11]:
 					drawSeg(self, 'black', div_w*(x+1), div_h*(y+1), div_w, 1)
+					
+		self.ball = ShapeNode(ui.Path.oval(0,0,2*div_w/3,2*div_h/3), 'gray', 'gray', shadow=None)
+		self.ball.anchor_point = (0.5,0.5)
+		self.moving = False
+		self.x = 0
+		self.y = 0
+		self.ball.position = div_w*1.5,div_h*1.5
+		self.add_child(self.ball)
+		
+	def touch_began(self, touch):
+		self.touch_start = touch.location
+		
+	def touch_ended(self, touch):
+		if self.moving:
+			return
+		self.touch_end = touch.location
+		dy = self.touch_end.y - self.touch_start.y
+		dx = self.touch_end.x - self.touch_start.x
+		up = dy > 0
+		down = dy < 0
+		left = dx < 0
+		right = dx > 0
+		if right and (abs(dx)>abs(dy)) and not(self.maze[self.y][self.x+1] in [1,11]):
+			a = [Action.move_by(self.div_w,0,.15), Action.call(self.endMove)]
+			self.x = self.x+1
+		elif left and (abs(dx)>abs(dy)) and not(self.maze[self.y][self.x] in [1,11]):
+			a = [Action.move_by(-self.div_w,0,.15), Action.call(self.endMove)]
+			self.x -= 1
+		elif up and (abs(dx)<abs(dy)) and not(self.maze[self.y+1][self.x] in [10,11]):
+			a = [Action.move_by(0,self.div_h,.15), Action.call(self.endMove)]
+			self.y += 1
+		elif down and (abs(dx)<abs(dy)) and not(self.maze[self.y][self.x] in [10,11]):
+			a = [Action.move_by(0,-self.div_h,.15), Action.call(self.endMove)]
+			self.y -= 1
+		else:
+			a = [Action.call(self.endMove)]
+			
+		self.moving = True
+		self.ball.run_action(Action.sequence(a))
+
+	def endMove(self):
+		self.moving = False
 
 def drawSeg(self, color, x, y, width, height):
 	seg = ui.Path.rect(0,0,width,height)
@@ -88,7 +133,7 @@ def genMaze(width, height):
 					x -= 1
 		return maze, end_x, end_y, path
 	
-run(MyScene())
+run(MyScene(), multi_touch=False)
 			
 	
 
